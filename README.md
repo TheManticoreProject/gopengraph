@@ -4,7 +4,7 @@
   A Go library to create BloodHound OpenGraphs easily
   <br>
   <a href="https://pkg.go.dev/github.com/TheManticoreProject/bhopengraph"><img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/TheManticoreProject/bhopengraph.svg"></a>
-  <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/bhopengraph">
+  <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/gopengraph">
   <a href="https://twitter.com/intent/follow?screen_name=podalirius_" title="Follow"><img src="https://img.shields.io/twitter/follow/podalirius_?label=Podalirius&style=social"></a>
   <a href="https://www.youtube.com/c/Podalirius_?sub_confirmation=1" title="Subscribe"><img alt="YouTube Channel Subscribers" src="https://img.shields.io/youtube/channel/subscribers/UCF_x5O7CSfr82AfNVTKOv_A?style=social"></a>
   <img height=21px src="https://img.shields.io/badge/Get bloodhound:-191646"> <a href="https://specterops.io/bloodhound-enterprise/" title="Get BloodHound Enterprise"><img alt="Get BloodHound Enterprise" height=21px src="https://mintlify.s3.us-west-1.amazonaws.com/specterops/assets/enterprise-edition-pill-tag.svg"></a>
