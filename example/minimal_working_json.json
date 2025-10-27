@@ -1,0 +1,48 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "match_by": "id",
+          "value": "234"
+        },
+        "kind": "Knows",
+        "start": {
+          "match_by": "id",
+          "value": "123"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "123",
+        "kinds": [
+          "Person",
+          "Base"
+        ],
+        "properties": {
+          "displayname": "bob",
+          "name": "BOB",
+          "objectid": "123",
+          "property": "a"
+        }
+      },
+      {
+        "id": "234",
+        "kinds": [
+          "Person",
+          "Base"
+        ],
+        "properties": {
+          "displayname": "alice",
+          "name": "ALICE",
+          "objectid": "234",
+          "property": "b"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "Base"
+  }
+}
