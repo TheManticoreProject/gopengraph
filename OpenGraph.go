@@ -260,14 +260,21 @@ func (g *OpenGraph) ExportJSON(includeMetadata bool) (string, error) {
 	graphContent := make(map[string]interface{})
 
 	// Convert nodes to dict format
-	var nodesData []map[string]interface{}
+	// Initialize nodesData as an empty slice (not nil) so it marshals to [] instead of null if no nodes exist.
+	nodesData := make([]map[string]interface{}, 0, len(g.nodes))
 	for _, n := range g.nodes {
 		nodesData = append(nodesData, n.ToDict())
 	}
 	graphContent["nodes"] = nodesData
 
 	// Convert edges to dict format
-	var edgesData []map[string]interface{}
+	// Initialize edgesData as an empty slice (not nil) so it marshals to [] instead of null if no edges exist.
+	// The original `var edgesData []map[string]interface{}` declares a nil slice.
+	// If `g.edges` is empty, the loop is skipped, and `edgesData` remains nil,
+	// which `json.Marshal` converts to `null`.
+	// By using `make([]map[string]interface{}, 0)`, it's explicitly an empty slice,
+	// which `json.Marshal` converts to `[]`.
+	edgesData := make([]map[string]interface{}, 0, len(g.edges))
 	for _, e := range g.edges {
 		edgesData = append(edgesData, e.ToDict())
 	}
