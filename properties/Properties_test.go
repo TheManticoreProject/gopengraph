@@ -18,7 +18,7 @@ func TestNewProperties(t *testing.T) {
 	}
 
 	// Test constructor with key-value pairs
-	p2 := properties.NewProperties("name", "test", "age", 25, "active", true)
+	p2 := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25, "active": true})
 	if p2.Len() != 3 {
 		t.Errorf("Expected length 3, got %d", p2.Len())
 	}
@@ -32,11 +32,6 @@ func TestNewProperties(t *testing.T) {
 		t.Error("Expected active to be true")
 	}
 
-	// Test constructor with odd number of arguments (should ignore last one)
-	p3 := properties.NewProperties("key1", "value1", "key2", "value2", "orphan")
-	if p3.Len() != 2 {
-		t.Errorf("Expected length 2, got %d", p3.Len())
-	}
 }
 
 func TestSetProperty(t *testing.T) {
@@ -92,7 +87,7 @@ func TestSetProperty(t *testing.T) {
 }
 
 func TestGetProperty(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 
 	// Test getting existing property
 	if p.GetProperty("name") != "test" {
@@ -116,7 +111,7 @@ func TestGetProperty(t *testing.T) {
 }
 
 func TestRemoveProperty(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 
 	// Test removing existing property
 	p.RemoveProperty("name")
@@ -135,7 +130,7 @@ func TestRemoveProperty(t *testing.T) {
 }
 
 func TestHasProperty(t *testing.T) {
-	p := properties.NewProperties("name", "test")
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test"})
 
 	// Test existing property
 	if !p.HasProperty("name") {
@@ -149,7 +144,7 @@ func TestHasProperty(t *testing.T) {
 }
 
 func TestGetAllProperties(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 	props := p.GetAllProperties()
 
 	// Test that we get a copy
@@ -171,7 +166,7 @@ func TestGetAllProperties(t *testing.T) {
 }
 
 func TestClear(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 
 	if p.Len() != 2 {
 		t.Errorf("Expected length 2 before clear, got %d", p.Len())
@@ -188,7 +183,7 @@ func TestClear(t *testing.T) {
 }
 
 func TestToDict(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 	dict := p.ToDict()
 
 	// Test that ToDict returns the same as GetAllProperties
@@ -227,7 +222,7 @@ func TestLen(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	p := properties.NewProperties("name", "test")
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test"})
 
 	// Test existing property
 	if !p.Contains("name") {
@@ -241,7 +236,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	p := properties.NewProperties("name", "test", "age", 25)
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"name": "test", "age": 25})
 	str := p.String()
 
 	// Test that string representation contains expected elements
@@ -300,14 +295,14 @@ func BenchmarkSetProperty(b *testing.B) {
 }
 
 func BenchmarkGetProperty(b *testing.B) {
-	p := properties.NewProperties("key", "value")
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"key": "value"})
 	for i := 0; i < b.N; i++ {
 		p.GetProperty("key")
 	}
 }
 
 func BenchmarkHasProperty(b *testing.B) {
-	p := properties.NewProperties("key", "value")
+	p := properties.NewPropertiesFromMap(map[string]interface{}{"key": "value"})
 	for i := 0; i < b.N; i++ {
 		p.HasProperty("key")
 	}

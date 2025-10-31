@@ -9,19 +9,21 @@ type Properties struct {
 	Properties map[string]interface{}
 }
 
-// NewProperties creates a new Properties instance with optional key-value pairs
-func NewProperties(kvPairs ...interface{}) *Properties {
+// NewProperties creates a new Properties instance
+func NewProperties() *Properties {
 	p := &Properties{
 		Properties: make(map[string]interface{}),
 	}
 
-	// Process key-value pairs if provided
-	for i := 0; i < len(kvPairs); i += 2 {
-		if i+1 < len(kvPairs) {
-			if key, ok := kvPairs[i].(string); ok {
-				p.SetProperty(key, kvPairs[i+1])
-			}
-		}
+	return p
+}
+
+// NewPropertiesFromMap creates a new Properties instance from a map of key-value pairs
+func NewPropertiesFromMap(values map[string]interface{}) *Properties {
+	p := NewProperties()
+
+	for key, value := range values {
+		p.SetProperty(key, value)
 	}
 
 	return p
