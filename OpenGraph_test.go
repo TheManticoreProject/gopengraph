@@ -3,11 +3,91 @@ package gopengraph_test
 import (
 	"testing"
 
+	"encoding/json"
+
 	"github.com/TheManticoreProject/gopengraph"
 	"github.com/TheManticoreProject/gopengraph/edge"
 	"github.com/TheManticoreProject/gopengraph/node"
 	"github.com/TheManticoreProject/gopengraph/properties"
 )
+
+func TestExportJSON(t *testing.T) {
+	t.Run("empty graph exports empty nodes and edges arrays", func(t *testing.T) {
+		g := gopengraph.NewOpenGraph("test-source")
+		jsonData, err := g.ExportJSON(true)
+		if err != nil {
+			t.Fatalf("ExportJSON failed: %v", err)
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+			t.Fatalf("Failed to unmarshal JSON: %v", err)
+		}
+
+		graphContent, ok := result["graph"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("Expected 'graph' key in JSON output")
+		}
+
+		// Check for empty nodes array
+		nodes, ok := graphContent["nodes"].([]interface{})
+		if !ok {
+			t.Fatalf("Expected 'nodes' key to be an array")
+		}
+		if len(nodes) != 0 {
+			t.Errorf("Expected 'nodes' array to be empty, got %d elements", len(nodes))
+		}
+
+		// Check for empty edges array
+		edges, ok := graphContent["edges"].([]interface{})
+		if !ok {
+			t.Fatalf("Expected 'edges' key to be an array")
+		}
+		if len(edges) != 0 {
+			t.Errorf("Expected 'edges' array to be empty, got %d elements", len(edges))
+		}
+	})
+
+	t.Run("metadata not present when includeMetadata is false", func(t *testing.T) {
+		g := gopengraph.NewOpenGraph("test-source") // Ensure sourceKind is set for potential metadata
+		jsonData, err := g.ExportJSON(false)
+		if err != nil {
+			t.Fatalf("ExportJSON failed: %v", err)
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+			t.Fatalf("Failed to unmarshal JSON: %v", err)
+		}
+
+		if _, exists := result["metadata"]; exists {
+			t.Error("Expected 'metadata' key not to be present when includeMetadata is false")
+		}
+	})
+
+	t.Run("metadata present when includeMetadata is true and sourceKind is set", func(t *testing.T) {
+		g := gopengraph.NewOpenGraph("test-source")
+		jsonData, err := g.ExportJSON(true)
+		if err != nil {
+			t.Fatalf("ExportJSON failed: %v", err)
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+			t.Fatalf("Failed to unmarshal JSON: %v", err)
+		}
+
+		metadata, ok := result["metadata"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("Expected 'metadata' key to be present and a map when includeMetadata is true")
+		}
+
+		sourceKind, ok := metadata["source_kind"].(string)
+		if !ok || sourceKind != "test-source" {
+			t.Errorf("Expected 'source_kind' in metadata to be 'test-source', got %v", metadata["source_kind"])
+		}
+	})
+}
 
 func TestNewOpenGraph(t *testing.T) {
 	g := gopengraph.NewOpenGraph("test")
