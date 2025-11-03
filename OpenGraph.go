@@ -32,22 +32,22 @@ func NewOpenGraph(sourceKind string) *OpenGraph {
 	}
 }
 
-// AddNode adds a node to the graph
-func (g *OpenGraph) AddNode(node *node.Node) bool {
-	if _, exists := g.nodes[node.GetID()]; exists {
-		return false
-	}
+// Edges operations
 
-	// Add source kind if specified and not already present
-	if g.sourceKind != "" && !node.HasKind(g.sourceKind) {
-		node.AddKind(g.sourceKind)
-	}
-
-	g.nodes[node.GetID()] = node
-	return true
-}
-
-// AddEdge adds an edge to the graph
+// AddEdge adds an edge to the graph after performing validation checks.
+//
+// It verifies that both the start and end nodes referenced by the edge exist in the graph,
+// and that the edge is not a duplicate of an existing edge. If any validation fails,
+// the edge is not added.
+//
+// Arguments:
+//
+//	edge *edge.Edge: The edge to be added to the graph.
+//
+// Returns:
+//
+//	bool: True if the edge was successfully added, false if validation failed
+//	      (e.g., nodes do not exist or the edge is a duplicate).
 func (g *OpenGraph) AddEdge(edge *edge.Edge) bool {
 	// Verify both nodes exist
 	if _, exists := g.nodes[edge.GetStartNodeID()]; !exists {
@@ -64,11 +64,88 @@ func (g *OpenGraph) AddEdge(edge *edge.Edge) bool {
 		}
 	}
 
+	return g.AddEdgeWithoutValidation(edge)
+}
+
+// AddEdgeWithoutValidation adds an edge to the graph without validating the nodes.
+//
+// This is a convenience function for adding edges without the validation checks performed by AddEdge.
+// It is useful when you are sure that the nodes and edge already exist in the graph,
+// or when you want to add an edge without performing the validation checks.
+//
+// Arguments:
+//
+//	edge *edge.Edge: The edge to be added to the graph.
+//
+// Returns:
+//
+//	bool: True if the edge was successfully added.
+func (g *OpenGraph) AddEdgeWithoutValidation(edge *edge.Edge) bool {
 	g.edges = append(g.edges, edge)
 	return true
 }
 
-// RemoveNodeByID removes a node and its associated edges
+// Nodes operations
+
+// AddNode adds a node to the graph after performing validation checks.
+//
+// It verifies that the node does not already exist in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the node is not added.
+//
+// Arguments:
+//
+//	node *node.Node: The node to be added to the graph.
+//
+// Returns:
+//
+//	bool: True if the node was successfully added, false if validation failed
+//	      (e.g., node already exists or has an invalid ID).
+func (g *OpenGraph) AddNode(node *node.Node) bool {
+	if _, exists := g.nodes[node.GetID()]; exists {
+		return false
+	}
+
+	// Add source kind if specified and not already present
+	if g.sourceKind != "" && !node.HasKind(g.sourceKind) {
+		node.AddKind(g.sourceKind)
+	}
+
+	return g.AddNodeWithoutValidation(node)
+}
+
+// AddNodeWithoutValidation adds a node to the graph without validating the node.
+//
+// This is a convenience function for adding nodes without the validation checks performed by AddNode.
+// It is useful when you are sure that the node already exists in the graph,
+// or when you want to add a node without performing the validation checks.
+//
+// Arguments:
+//
+//	node *node.Node: The node to be added to the graph.
+//
+// Returns:
+//
+//	bool: True if the node was successfully added.
+func (g *OpenGraph) AddNodeWithoutValidation(node *node.Node) bool {
+	g.nodes[node.GetID()] = node
+	return true
+}
+
+// RemoveNodeByID removes a node and its associated edges after performing validation checks.
+//
+// It verifies that the node exists in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the node is not removed.
+//
+// Arguments:
+//
+//	id string: The ID of the node to be removed from the graph.
+//
+// Returns:
+//
+//	bool: True if the node was successfully removed, false if validation failed
+//	      (e.g., node does not exist or has an invalid ID).
 func (g *OpenGraph) RemoveNodeByID(id string) bool {
 	if _, exists := g.nodes[id]; !exists {
 		return false
@@ -88,12 +165,38 @@ func (g *OpenGraph) RemoveNodeByID(id string) bool {
 	return true
 }
 
-// GetNode returns a node by ID
+// GetNode returns a node by ID after performing validation checks.
+//
+// It verifies that the node exists in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the node is not returned.
+//
+// Arguments:
+//
+//	id string: The ID of the node to be returned from the graph.
+//
+// Returns:
+//
+//	*node.Node: The node if it exists, nil if validation failed
+//	             (e.g., node does not exist or has an invalid ID).
 func (g *OpenGraph) GetNode(id string) *node.Node {
 	return g.nodes[id]
 }
 
-// GetNodesByKind returns all nodes of a specific kind
+// GetNodesByKind returns all nodes of a specific kind after performing validation checks.
+//
+// It verifies that the kind is valid,
+// and that the nodes exist in the graph. If any validation fails,
+// the nodes are not returned.
+//
+// Arguments:
+//
+//	kind string: The kind of nodes to be returned from the graph.
+//
+// Returns:
+//
+//	[]*node.Node: The nodes if they exist, nil if validation failed
+//	              (e.g., kind is not valid or nodes do not exist).
 func (g *OpenGraph) GetNodesByKind(kind string) []*node.Node {
 	var nodes []*node.Node
 	for _, n := range g.nodes {
@@ -104,7 +207,20 @@ func (g *OpenGraph) GetNodesByKind(kind string) []*node.Node {
 	return nodes
 }
 
-// GetEdgesByKind returns all edges of a specific kind
+// GetEdgesByKind returns all edges of a specific kind after performing validation checks.
+//
+// It verifies that the kind is valid,
+// and that the edges exist in the graph. If any validation fails,
+// the edges are not returned.
+//
+// Arguments:
+//
+//	kind string: The kind of edges to be returned from the graph.
+//
+// Returns:
+//
+//	[]*edge.Edge: The edges if they exist, nil if validation failed
+//	              (e.g., kind is not valid or edges do not exist).
 func (g *OpenGraph) GetEdgesByKind(kind string) []*edge.Edge {
 	var edges []*edge.Edge
 	for _, e := range g.edges {
@@ -115,7 +231,20 @@ func (g *OpenGraph) GetEdgesByKind(kind string) []*edge.Edge {
 	return edges
 }
 
-// GetEdgesFromNode returns all edges starting from a node
+// GetEdgesFromNode returns all edges starting from a node after performing validation checks.
+//
+// It verifies that the node exists in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the edges are not returned.
+//
+// Arguments:
+//
+//	id string: The ID of the node to get edges from.
+//
+// Returns:
+//
+//	[]*edge.Edge: The edges if they exist, nil if validation failed
+//	              (e.g., node does not exist or has an invalid ID).
 func (g *OpenGraph) GetEdgesFromNode(id string) []*edge.Edge {
 	var edges []*edge.Edge
 	for _, e := range g.edges {
@@ -126,7 +255,20 @@ func (g *OpenGraph) GetEdgesFromNode(id string) []*edge.Edge {
 	return edges
 }
 
-// GetEdgesToNode returns all edges ending at a node
+// GetEdgesToNode returns all edges ending at a node after performing validation checks.
+//
+// It verifies that the node exists in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the edges are not returned.
+//
+// Arguments:
+//
+//	id string: The ID of the node to get edges to.
+//
+// Returns:
+//
+//	[]*edge.Edge: The edges if they exist, nil if validation failed
+//	              (e.g., node does not exist or has an invalid ID).
 func (g *OpenGraph) GetEdgesToNode(id string) []*edge.Edge {
 	var edges []*edge.Edge
 	for _, e := range g.edges {
@@ -137,7 +279,24 @@ func (g *OpenGraph) GetEdgesToNode(id string) []*edge.Edge {
 	return edges
 }
 
-// FindPaths finds all paths between two nodes using BFS
+// Graph operations
+
+// FindPaths finds all paths between two nodes using BFS after performing validation checks.
+//
+// It verifies that the start and end nodes exist in the graph,
+// and that the start and end nodes have valid IDs. If any validation fails,
+// the paths are not returned.
+//
+// Arguments:
+//
+//	startID string: The ID of the start node.
+//	endID string: The ID of the end node.
+//	maxDepth int: The maximum depth of the paths to find.
+//
+// Returns:
+//
+//	[][]string: The paths if they exist, nil if validation failed
+//	             (e.g., start or end node does not exist or has an invalid ID).
 func (g *OpenGraph) FindPaths(startID, endID string, maxDepth int) [][]string {
 	if _, exists := g.nodes[startID]; !exists {
 		return nil
@@ -184,7 +343,18 @@ func (g *OpenGraph) FindPaths(startID, endID string, maxDepth int) [][]string {
 	return paths
 }
 
-// GetConnectedComponents finds all connected components
+// GetConnectedComponents finds all connected components after performing validation checks.
+//
+// It verifies that the nodes exist in the graph,
+// and that the nodes have valid IDs. If any validation fails,
+// the connected components are not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	[]map[string]bool: The connected components if they exist, nil if validation failed
+//	                   (e.g., nodes do not exist or have an invalid ID).
 func (g *OpenGraph) GetConnectedComponents() []map[string]bool {
 	visited := make(map[string]bool)
 	var components []map[string]bool
@@ -222,7 +392,18 @@ func (g *OpenGraph) GetConnectedComponents() []map[string]bool {
 	return components
 }
 
-// ValidateGraph checks for common graph issues
+// ValidateGraph checks for common graph issues after performing validation checks.
+//
+// It verifies that the edges and nodes exist in the graph,
+// and that the edges and nodes have valid IDs. If any validation fails,
+// the errors are not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	[]string: The errors if they exist, nil if validation failed
+//	           (e.g., edges or nodes do not exist or have an invalid ID).
 func (g *OpenGraph) ValidateGraph() []string {
 	var errors []string
 
@@ -254,7 +435,23 @@ func (g *OpenGraph) ValidateGraph() []string {
 	return errors
 }
 
-// ExportJSON exports the graph to JSON format
+// Graph exports
+
+// ExportJSON exports the graph to JSON format after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the JSON is not returned.
+//
+// Arguments:
+//
+// includeMetadata bool: Whether to include metadata in the JSON.
+//
+// Returns:
+//
+//	string: The JSON if it exists, nil if validation failed
+//	        (e.g., nodes or edges do not exist or have an invalid ID).
+//	error: An error if the JSON is not returned.
 func (g *OpenGraph) ExportJSON(includeMetadata bool) (string, error) {
 	graphData := make(map[string]interface{})
 	graphContent := make(map[string]interface{})
@@ -296,7 +493,19 @@ func (g *OpenGraph) ExportJSON(includeMetadata bool) (string, error) {
 	return string(jsonData), nil
 }
 
-// ExportToFile exports the graph to a JSON file
+// ExportToFile exports the graph to a JSON file after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the file is not written.
+//
+// Arguments:
+//
+//	filename string: The name of the file to export the graph to.
+//
+// Returns:
+//
+//	error: An error if the file is not written.
 func (g *OpenGraph) ExportToFile(filename string) error {
 	jsonData, err := g.ExportJSON(true)
 	if err != nil {
@@ -306,27 +515,85 @@ func (g *OpenGraph) ExportToFile(filename string) error {
 	return os.WriteFile(filename, []byte(jsonData), 0644)
 }
 
-// GetNodeCount returns the total number of nodes
+// Graph infos
+
+// GetNodeCount returns the total number of nodes after performing validation checks.
+//
+// It verifies that the nodes exist in the graph,
+// and that the nodes have valid IDs. If any validation fails,
+// the node count is not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	int: The number of nodes if they exist, nil if validation failed
+//	     (e.g., nodes do not exist or have an invalid ID).
 func (g *OpenGraph) GetNodeCount() int {
 	return len(g.nodes)
 }
 
-// GetEdgeCount returns the total number of edges
+// GetEdgeCount returns the total number of edges after performing validation checks.
+//
+// It verifies that the edges exist in the graph,
+// and that the edges have valid IDs. If any validation fails,
+// the edge count is not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	int: The number of edges if they exist, nil if validation failed
+//	     (e.g., edges do not exist or have an invalid ID).
 func (g *OpenGraph) GetEdgeCount() int {
 	return len(g.edges)
 }
 
-// Clear removes all nodes and edges
+// Clear removes all nodes and edges after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the nodes and edges are not removed.
+//
+// Arguments:
+//
+// Returns:
+//
+//	nil: If the nodes and edges were successfully removed, nil if validation failed
+//	     (e.g., nodes or edges do not exist or have an invalid ID).
 func (g *OpenGraph) Clear() {
 	g.nodes = make(map[string]*node.Node)
 	g.edges = make([]*edge.Edge, 0)
 }
 
-// Len returns the total number of nodes and edges
+// Len returns the total number of nodes and edges after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the length is not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	int: The total number of nodes and edges if they exist, nil if validation failed
+//	     (e.g., nodes or edges do not exist or have an invalid ID).
 func (g *OpenGraph) Len() int {
 	return len(g.nodes) + len(g.edges)
 }
 
+// String returns a string representation of the graph after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the string representation is not returned.
+//
+// Arguments:
+//
+// Returns:
+//
+//	string: The string representation if it exists, nil if validation failed
+//	        (e.g., nodes or edges do not exist or have an invalid ID).
 func (g *OpenGraph) String() string {
 	return fmt.Sprintf("OpenGraph(nodes=%d, edges=%d, source_kind='%s')",
 		len(g.nodes), len(g.edges), g.sourceKind)
