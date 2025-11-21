@@ -214,3 +214,69 @@ func TestGetConnectedComponents(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONioInvolution(t *testing.T) {
+	// Create an OpenGraph instance
+	graph := gopengraph.NewOpenGraph("Base")
+
+	// Create nodes
+	bobProps := properties.NewProperties()
+	bobProps.SetProperty("displayname", "bob")
+	bobProps.SetProperty("property", "a")
+	bobProps.SetProperty("objectid", "123")
+	bobProps.SetProperty("name", "BOB")
+
+	bobNode, _ := node.NewNode("123", []string{"Person", "Base"}, bobProps)
+
+	aliceProps := properties.NewProperties()
+	aliceProps.SetProperty("displayname", "alice")
+	aliceProps.SetProperty("property", "b")
+	aliceProps.SetProperty("objectid", "234")
+	aliceProps.SetProperty("name", "ALICE")
+
+	aliceNode, _ := node.NewNode("234", []string{"Person", "Base"}, aliceProps)
+
+	// Add nodes to graph
+	graph.AddNode(bobNode)
+	graph.AddNode(aliceNode)
+
+	// Create edge: Bob knows Alice
+	knowsEdge, _ := edge.NewEdge(
+		bobNode.GetID(),   // Bob is the start
+		aliceNode.GetID(), // Alice is the end
+		"Knows",
+		nil,
+	)
+
+	// Add edge to graph
+	graph.AddEdge(knowsEdge)
+
+	// ============================
+
+	// Export to JSON
+	jsonData, err := graph.ExportJSON(true)
+	if err != nil {
+		t.Fatalf("ExportJSON failed: %v", err)
+	}
+
+	importedGraph := gopengraph.NewOpenGraph("")
+	// Import from JSON
+	err = importedGraph.FromJSON(jsonData)
+	if err != nil {
+		t.Fatalf("FromJSON failed: %v", err)
+	}
+
+	// Check that the graph is the same
+	if importedGraph.GetNodeCount() != graph.GetNodeCount() {
+		t.Errorf("Expected %d nodes, got %d", graph.GetNodeCount(), importedGraph.GetNodeCount())
+	}
+	if importedGraph.GetEdgeCount() != graph.GetEdgeCount() {
+		t.Errorf("Expected %d edges, got %d", graph.GetEdgeCount(), importedGraph.GetEdgeCount())
+	}
+	if importedGraph.GetSourceKind() != graph.GetSourceKind() {
+		t.Errorf("Expected source kind '%s', got %s", graph.GetSourceKind(), importedGraph.GetSourceKind())
+	}
+	if !importedGraph.Equal(graph) {
+		t.Errorf("Expected graphs to be equal")
+	}
+}

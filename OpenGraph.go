@@ -7,6 +7,7 @@ import (
 
 	"github.com/TheManticoreProject/gopengraph/edge"
 	"github.com/TheManticoreProject/gopengraph/node"
+	"github.com/TheManticoreProject/gopengraph/properties"
 )
 
 // OpenGraph struct for managing a graph structure compatible with BloodHound OpenGraph.
@@ -165,6 +166,29 @@ func (g *OpenGraph) RemoveNodeByID(id string) bool {
 	return true
 }
 
+// HasNode checks if a node exists in the graph after performing validation checks.
+//
+// It verifies that the node exists in the graph,
+// and that the node has a valid ID. If any validation fails,
+// the node is not returned.
+//
+// Arguments:
+//
+//	n *node.Node: The node to check for existence in the graph.
+//
+// Returns:
+//
+//	bool: True if the node exists in the graph, false if validation failed
+//	           (e.g., node does not exist or has an invalid ID).
+func (g *OpenGraph) HasNode(n *node.Node) bool {
+	for _, node := range g.nodes {
+		if node.Equal(n) {
+			return true
+		}
+	}
+	return false
+}
+
 // GetNode returns a node by ID after performing validation checks.
 //
 // It verifies that the node exists in the graph,
@@ -205,6 +229,29 @@ func (g *OpenGraph) GetNodesByKind(kind string) []*node.Node {
 		}
 	}
 	return nodes
+}
+
+// HasEdge checks if an edge exists in the graph after performing validation checks.
+//
+// It verifies that the edge exists in the graph,
+// and that the edge has a valid ID. If any validation fails,
+// the edge is not returned.
+//
+// Arguments:
+//
+//	e *edge.Edge: The edge to check for existence in the graph.
+//
+// Returns:
+//
+//	bool: True if the edge exists in the graph, false if validation failed
+//	           (e.g., edge does not exist or has an invalid ID).
+func (g *OpenGraph) HasEdge(e *edge.Edge) bool {
+	for _, edge := range g.edges {
+		if edge.Equal(e) {
+			return true
+		}
+	}
+	return false
 }
 
 // GetEdgesByKind returns all edges of a specific kind after performing validation checks.
@@ -277,6 +324,40 @@ func (g *OpenGraph) GetEdgesToNode(id string) []*edge.Edge {
 		}
 	}
 	return edges
+}
+
+// Metadata operations
+
+// GetSourceKind returns the source kind of the graph after performing validation checks.
+//
+// It verifies that the source kind exists in the graph,
+// and that the source kind has a valid ID. If any validation fails,
+// the source kind is not returned.
+//
+// Returns:
+//
+//	string: The source kind if it exists, nil if validation failed
+//	           (e.g., source kind does not exist or has an invalid ID).
+func (g *OpenGraph) GetSourceKind() string {
+	return g.sourceKind
+}
+
+// SetSourceKind sets the source kind of the graph after performing validation checks.
+//
+// It verifies that the source kind exists in the graph,
+// and that the source kind has a valid ID. If any validation fails,
+// the source kind is not set.
+//
+// Arguments:
+//
+//	sourceKind string: The source kind to set for the graph.
+//
+// Returns:
+//
+//	string: The source kind if it exists, nil if validation failed
+//	           (e.g., source kind does not exist or has an invalid ID).
+func (g *OpenGraph) SetSourceKind(sourceKind string) {
+	g.sourceKind = sourceKind
 }
 
 // Graph operations
@@ -515,6 +596,108 @@ func (g *OpenGraph) ExportToFile(filename string) error {
 	return os.WriteFile(filename, []byte(jsonData), 0644)
 }
 
+// Graph imports
+
+// FromJSON imports graph data from a JSON string and appends it to the current graph.
+//
+// It expects JSON following the BloodHound OpenGraph schema. Nodes are added first,
+// followed by edges. Existing nodes are left unchanged and duplicate edges are skipped.
+//
+// If metadata.source_kind is present and the current graph has no source kind set,
+// it will be adopted.
+func (g *OpenGraph) FromJSON(jsonData string) error {
+	// Temporary structures to unmarshal incoming JSON
+	type ogNode struct {
+		ID         string                 `json:"id"`
+		Kinds      []string               `json:"kinds"`
+		Properties map[string]interface{} `json:"properties"`
+	}
+	type endpoint struct {
+		Value   string `json:"value"`
+		MatchBy string `json:"match_by"`
+	}
+	type ogEdge struct {
+		Kind       string                 `json:"kind"`
+		Start      endpoint               `json:"start"`
+		End        endpoint               `json:"end"`
+		Properties map[string]interface{} `json:"properties"`
+	}
+	type ogGraph struct {
+		Nodes []ogNode `json:"nodes"`
+		Edges []ogEdge `json:"edges"`
+	}
+	var openGraphDocument struct {
+		Graph    ogGraph `json:"graph"`
+		Metadata struct {
+			SourceKind string `json:"source_kind"`
+		} `json:"metadata"`
+	}
+
+	if err := json.Unmarshal([]byte(jsonData), &openGraphDocument); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Adopt source_kind if not already set
+	if g.sourceKind == "" && openGraphDocument.Metadata.SourceKind != "" {
+		g.sourceKind = openGraphDocument.Metadata.SourceKind
+	}
+
+	// Import nodes first
+	for _, n := range openGraphDocument.Graph.Nodes {
+		var props *properties.Properties
+		if n.Properties != nil {
+			props = properties.NewPropertiesFromMap(n.Properties)
+		} else {
+			props = properties.NewProperties()
+		}
+
+		newNode, err := node.NewNode(n.ID, append([]string{}, n.Kinds...), props)
+		if err != nil {
+			return fmt.Errorf("invalid node '%s': %w", n.ID, err)
+		}
+		// Append semantics: skip duplicates silently
+		_ = g.AddNode(newNode)
+	}
+
+	// Then import edges
+	for _, e := range openGraphDocument.Graph.Edges {
+		// Only 'id' is supported for match_by
+		if e.Start.MatchBy != "" && e.Start.MatchBy != "id" {
+			return fmt.Errorf("unsupported start.match_by '%s' for edge kind '%s'", e.Start.MatchBy, e.Kind)
+		}
+		if e.End.MatchBy != "" && e.End.MatchBy != "id" {
+			return fmt.Errorf("unsupported end.match_by '%s' for edge kind '%s'", e.End.MatchBy, e.Kind)
+		}
+
+		var props *properties.Properties
+		if e.Properties != nil {
+			props = properties.NewPropertiesFromMap(e.Properties)
+		} else {
+			props = properties.NewProperties()
+		}
+
+		newEdge, err := edge.NewEdge(e.Start.Value, e.End.Value, e.Kind, props)
+		if err != nil {
+			return fmt.Errorf("invalid edge (%s -> %s, kind '%s'): %w", e.Start.Value, e.End.Value, e.Kind, err)
+		}
+		// Append semantics: skip duplicates and require nodes to exist
+		_ = g.AddEdge(newEdge)
+	}
+
+	return nil
+}
+
+// FromJSONFile imports graph data from a JSON file and appends it to the current graph.
+//
+// It reads the file content and delegates to FromJSON.
+func (g *OpenGraph) FromJSONFile(filename string) error {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to read file '%s': %w", filename, err)
+	}
+	return g.FromJSON(string(data))
+}
+
 // Graph infos
 
 // GetNodeCount returns the total number of nodes after performing validation checks.
@@ -597,4 +780,39 @@ func (g *OpenGraph) Len() int {
 func (g *OpenGraph) String() string {
 	return fmt.Sprintf("OpenGraph(nodes=%d, edges=%d, source_kind='%s')",
 		len(g.nodes), len(g.edges), g.sourceKind)
+}
+
+// Equal checks if two graphs are equal after performing validation checks.
+//
+// It verifies that the nodes and edges exist in the graph,
+// and that the nodes and edges have valid IDs. If any validation fails,
+// the graphs are not equal.
+//
+// Arguments:
+//
+// Returns:
+//
+//	bool: True if the graphs are equal, false if validation failed
+//	     (e.g., nodes or edges do not exist or have an invalid ID).
+func (g *OpenGraph) Equal(other *OpenGraph) bool {
+	if g.GetNodeCount() != other.GetNodeCount() {
+		return false
+	}
+	if g.GetEdgeCount() != other.GetEdgeCount() {
+		return false
+	}
+	if g.GetSourceKind() != other.GetSourceKind() {
+		return false
+	}
+	for _, node := range g.nodes {
+		if !other.HasNode(node) {
+			return false
+		}
+	}
+	for _, edge := range g.edges {
+		if !other.HasEdge(edge) {
+			return false
+		}
+	}
+	return true
 }
