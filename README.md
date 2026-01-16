@@ -3,7 +3,7 @@
 <p align="center">
   A Go library to create BloodHound OpenGraphs easily
   <br>
-  <a href="https://pkg.go.dev/github.com/TheManticoreProject/bhopengraph"><img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/TheManticoreProject/bhopengraph.svg"></a>
+  <a href="https://pkg.go.dev/github.com/TheManticoreProject/gopengraph"><img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/TheManticoreProject/bhopengraph.svg"></a>
   <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/gopengraph">
   <a href="https://twitter.com/intent/follow?screen_name=podalirius_" title="Follow"><img src="https://img.shields.io/twitter/follow/podalirius_?label=Podalirius&style=social"></a>
   <a href="https://www.youtube.com/c/Podalirius_?sub_confirmation=1" title="Subscribe"><img alt="YouTube Channel Subscribers" src="https://img.shields.io/youtube/channel/subscribers/UCF_x5O7CSfr82AfNVTKOv_A?style=social"></a>
@@ -25,26 +25,26 @@ If you don't know about BloodHound OpenGraph yet, a great introduction can be fo
 Install with:
 
 ```bash
-go get github.com/TheManticoreProject/bhopengraph
+go get github.com/TheManticoreProject/gopengraph
 ```
 
 ## Examples
 
-Here is an example of a Go program using the [bhopengraph](https://github.com/TheManticoreProject/bhopengraph) Go library to model the [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/schema#minimal-working-json) from the OpenGraph Schema documentation:
+Here is an example of a Go program using the [gopengraph](https://github.com/TheManticoreProject/gopengraph) Go library to model the [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/schema#minimal-working-json) from the OpenGraph Schema documentation:
 
 ```go
 package main
 
 import (
-	"github.com/TheManticoreProject/bhopengraph"
-	"github.com/TheManticoreProject/bhopengraph/edge"
-	"github.com/TheManticoreProject/bhopengraph/node"
-	"github.com/TheManticoreProject/bhopengraph/properties"
+	"github.com/TheManticoreProject/gopengraph"
+	"github.com/TheManticoreProject/gopengraph/edge"
+	"github.com/TheManticoreProject/gopengraph/node"
+	"github.com/TheManticoreProject/gopengraph/properties"
 )
 
 func main() {
 	// Create an OpenGraph instance
-	graph := bhopengraph.NewOpenGraph("Base")
+	graph := gopengraph.NewOpenGraph("Base")
 
 	// Create nodes
 	bobProps := properties.NewProperties()
