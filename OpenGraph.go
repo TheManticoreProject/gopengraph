@@ -49,23 +49,31 @@ func NewOpenGraph(sourceKind string) *OpenGraph {
 //
 //	bool: True if the edge was successfully added, false if validation failed
 //	      (e.g., nodes do not exist or the edge is a duplicate).
-func (g *OpenGraph) AddEdge(edge *edge.Edge) bool {
-	// Verify both nodes exist
-	if _, exists := g.nodes[edge.GetStartNodeID()]; !exists {
-		return false
+func (g *OpenGraph) AddEdge(e *edge.Edge) bool {
+	// Verify both endpoints exist, but only for endpoints resolved by node id.
+	// name- and property-matched endpoints are resolved by BloodHound at
+	// ingestion time and cannot be validated against the local node set.
+	start := e.GetStart()
+	if start.GetMatchBy() == edge.MatchByID {
+		if _, exists := g.nodes[start.GetValue()]; !exists {
+			return false
+		}
 	}
-	if _, exists := g.nodes[edge.GetEndNodeID()]; !exists {
-		return false
-	}
-
-	// Check for duplicate edge
-	for _, e := range g.edges {
-		if e.Equal(edge) {
+	end := e.GetEnd()
+	if end.GetMatchBy() == edge.MatchByID {
+		if _, exists := g.nodes[end.GetValue()]; !exists {
 			return false
 		}
 	}
 
-	return g.AddEdgeWithoutValidation(edge)
+	// Check for duplicate edge
+	for _, existing := range g.edges {
+		if existing.Equal(e) {
+			return false
+		}
+	}
+
+	return g.AddEdgeWithoutValidation(e)
 }
 
 // AddEdgeWithoutValidation adds an edge to the graph without validating the nodes.
@@ -488,15 +496,22 @@ func (g *OpenGraph) GetConnectedComponents() []map[string]bool {
 func (g *OpenGraph) ValidateGraph() []string {
 	var errors []string
 
-	// Check for orphaned edges
-	for _, edge := range g.edges {
-		if _, exists := g.nodes[edge.GetStartNodeID()]; !exists {
-			errors = append(errors, fmt.Sprintf("Edge %s references non-existent start node: %s",
-				edge.GetKind(), edge.GetStartNodeID()))
+	// Check for orphaned edges. Only id-matched endpoints reference local nodes;
+	// name- and property-matched endpoints are resolved at ingestion time.
+	for _, e := range g.edges {
+		start := e.GetStart()
+		if start.GetMatchBy() == edge.MatchByID {
+			if _, exists := g.nodes[start.GetValue()]; !exists {
+				errors = append(errors, fmt.Sprintf("Edge %s references non-existent start node: %s",
+					e.GetKind(), start.GetValue()))
+			}
 		}
-		if _, exists := g.nodes[edge.GetEndNodeID()]; !exists {
-			errors = append(errors, fmt.Sprintf("Edge %s references non-existent end node: %s",
-				edge.GetKind(), edge.GetEndNodeID()))
+		end := e.GetEnd()
+		if end.GetMatchBy() == edge.MatchByID {
+			if _, exists := g.nodes[end.GetValue()]; !exists {
+				errors = append(errors, fmt.Sprintf("Edge %s references non-existent end node: %s",
+					e.GetKind(), end.GetValue()))
+			}
 		}
 	}
 
@@ -612,15 +627,45 @@ func (g *OpenGraph) FromJSON(jsonData string) error {
 		Kinds      []string               `json:"kinds"`
 		Properties map[string]interface{} `json:"properties"`
 	}
+	type propertyMatcher struct {
+		Key      string      `json:"key"`
+		Operator string      `json:"operator"`
+		Value    interface{} `json:"value"`
+	}
 	type endpoint struct {
-		Value   string `json:"value"`
-		MatchBy string `json:"match_by"`
+		Value            string            `json:"value"`
+		MatchBy          string            `json:"match_by"`
+		Kind             string            `json:"kind"`
+		PropertyMatchers []propertyMatcher `json:"property_matchers"`
 	}
 	type ogEdge struct {
 		Kind       string                 `json:"kind"`
 		Start      endpoint               `json:"start"`
 		End        endpoint               `json:"end"`
 		Properties map[string]interface{} `json:"properties"`
+	}
+
+	// buildEndpoint converts a decoded endpoint into an edge.Endpoint, defaulting
+	// to id matching when match_by is omitted.
+	buildEndpoint := func(ep endpoint) (edge.Endpoint, error) {
+		matchBy := ep.MatchBy
+		if matchBy == "" {
+			matchBy = edge.MatchByID
+		}
+		switch matchBy {
+		case edge.MatchByID:
+			return edge.NewEndpointByID(ep.Value), nil
+		case edge.MatchByName:
+			return edge.NewEndpointByName(ep.Value, ep.Kind), nil
+		case edge.MatchByProperty:
+			matchers := make([]edge.PropertyMatcher, 0, len(ep.PropertyMatchers))
+			for _, m := range ep.PropertyMatchers {
+				matchers = append(matchers, edge.PropertyMatcher{Key: m.Key, Operator: m.Operator, Value: m.Value})
+			}
+			return edge.NewEndpointByProperty(matchers, ep.Kind), nil
+		default:
+			return edge.Endpoint{}, fmt.Errorf("unsupported match_by '%s'", ep.MatchBy)
+		}
 	}
 	type ogGraph struct {
 		Nodes []ogNode `json:"nodes"`
@@ -661,12 +706,13 @@ func (g *OpenGraph) FromJSON(jsonData string) error {
 
 	// Then import edges
 	for _, e := range openGraphDocument.Graph.Edges {
-		// Only 'id' is supported for match_by
-		if e.Start.MatchBy != "" && e.Start.MatchBy != "id" {
-			return fmt.Errorf("unsupported start.match_by '%s' for edge kind '%s'", e.Start.MatchBy, e.Kind)
+		startEndpoint, err := buildEndpoint(e.Start)
+		if err != nil {
+			return fmt.Errorf("invalid start endpoint for edge kind '%s': %w", e.Kind, err)
 		}
-		if e.End.MatchBy != "" && e.End.MatchBy != "id" {
-			return fmt.Errorf("unsupported end.match_by '%s' for edge kind '%s'", e.End.MatchBy, e.Kind)
+		endEndpoint, err := buildEndpoint(e.End)
+		if err != nil {
+			return fmt.Errorf("invalid end endpoint for edge kind '%s': %w", e.Kind, err)
 		}
 
 		var props *properties.Properties
@@ -676,11 +722,11 @@ func (g *OpenGraph) FromJSON(jsonData string) error {
 			props = properties.NewProperties()
 		}
 
-		newEdge, err := edge.NewEdge(e.Start.Value, e.End.Value, e.Kind, props)
+		newEdge, err := edge.NewEdgeWithEndpoints(startEndpoint, endEndpoint, e.Kind, props)
 		if err != nil {
-			return fmt.Errorf("invalid edge (%s -> %s, kind '%s'): %w", e.Start.Value, e.End.Value, e.Kind, err)
+			return fmt.Errorf("invalid edge (kind '%s'): %w", e.Kind, err)
 		}
-		// Append semantics: skip duplicates and require nodes to exist
+		// Append semantics: skip duplicates and require id-matched nodes to exist
 		_ = g.AddEdge(newEdge)
 	}
 

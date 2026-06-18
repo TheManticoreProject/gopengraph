@@ -89,6 +89,59 @@ func TestExportJSON(t *testing.T) {
 	})
 }
 
+func TestFromJSONPropertyMatching(t *testing.T) {
+	jsonData := `{
+  "graph": {
+    "nodes": [
+      { "id": "server-1", "kinds": ["Server"], "properties": { "name": "SRV1" } }
+    ],
+    "edges": [
+      {
+        "kind": "CustomRelationship",
+        "start": {
+          "match_by": "property",
+          "property_matchers": [ { "key": "username", "operator": "equals", "value": "alice.smith" } ],
+          "kind": "User"
+        },
+        "end": { "match_by": "id", "value": "server-1" }
+      }
+    ]
+  }
+}`
+
+	g := gopengraph.NewOpenGraph("")
+	if err := g.FromJSON(jsonData); err != nil {
+		t.Fatalf("FromJSON failed: %v", err)
+	}
+
+	// The property-matched edge must be imported even though its start endpoint
+	// does not correspond to a local node.
+	if g.GetEdgeCount() != 1 {
+		t.Fatalf("expected 1 edge, got %d", g.GetEdgeCount())
+	}
+
+	edges := g.GetEdgesByKind("CustomRelationship")
+	if len(edges) != 1 {
+		t.Fatalf("expected 1 CustomRelationship edge, got %d", len(edges))
+	}
+	start := edges[0].GetStart()
+	if start.GetMatchBy() != edge.MatchByProperty {
+		t.Errorf("expected start match_by %q, got %q", edge.MatchByProperty, start.GetMatchBy())
+	}
+	matchers := start.GetPropertyMatchers()
+	if len(matchers) != 1 || matchers[0].Key != "username" || matchers[0].Value != "alice.smith" {
+		t.Errorf("unexpected property matchers: %v", matchers)
+	}
+
+	// A graph holding only id-matched and property-matched endpoints must not
+	// report the property endpoint as an orphan reference.
+	for _, errMsg := range g.ValidateGraph() {
+		if errMsg != "" && len(errMsg) >= 4 && errMsg[:4] == "Edge" {
+			t.Errorf("unexpected orphan-edge validation error: %s", errMsg)
+		}
+	}
+}
+
 func TestNewOpenGraph(t *testing.T) {
 	g := gopengraph.NewOpenGraph("test")
 	if g == nil {
