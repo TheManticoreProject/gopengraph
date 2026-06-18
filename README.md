@@ -16,9 +16,9 @@
 
 ## Features
 
-This module provides Go types and helpers for creating and managing graph structures that are compatible with BloodHound OpenGraph. The APIs follow the [BloodHound OpenGraph schema](https://bloodhound.specterops.io/opengraph/schema) and [best practices](https://bloodhound.specterops.io/opengraph/best-practices).
+This module provides Go types and helpers for creating and managing graph structures that are compatible with BloodHound OpenGraph. The APIs follow the [BloodHound OpenGraph schema](https://bloodhound.specterops.io/opengraph/developer/graph-data) and [best practices](https://bloodhound.specterops.io/opengraph/developer/best-practices).
 
-If you don't know about BloodHound OpenGraph yet, a great introduction can be found here: [https://bloodhound.specterops.io/opengraph/best-practices](https://bloodhound.specterops.io/opengraph/best-practices)
+If you don't know about BloodHound OpenGraph yet, a great introduction can be found here: [https://bloodhound.specterops.io/opengraph/overview](https://bloodhound.specterops.io/opengraph/overview)
 
 ## Installation
 
@@ -30,7 +30,7 @@ go get github.com/TheManticoreProject/gopengraph
 
 ## Examples
 
-Here is an example of a Go program using the [gopengraph](https://github.com/TheManticoreProject/gopengraph) Go library to model the [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/schema#minimal-working-json) from the OpenGraph Schema documentation:
+Here is an example of a Go program using the [gopengraph](https://github.com/TheManticoreProject/gopengraph) Go library to model the [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/developer/graph-data) from the OpenGraph Schema documentation:
 
 ```go
 package main
@@ -83,7 +83,7 @@ func main() {
 }
 ```
 
-This gives us the following [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/schema#minimal-working-json) as per the documentation:
+This gives us the following [Minimal Working JSON](https://bloodhound.specterops.io/opengraph/developer/graph-data) as per the documentation:
 
 ```json
 {
@@ -142,7 +142,7 @@ Pull requests are welcome. Feel free to open an issue if you want to add other f
 
 ## References
 
-- [BloodHound OpenGraph Best Practices](https://bloodhound.specterops.io/opengraph/best-practices)
-- [BloodHound OpenGraph Schema](https://bloodhound.specterops.io/opengraph/schema)
-- [BloodHound OpenGraph API](https://bloodhound.specterops.io/opengraph/api)
-- [BloodHound OpenGraph Custom Icons](https://bloodhound.specterops.io/opengraph/custom-icons)
+- [BloodHound OpenGraph Best Practices](https://bloodhound.specterops.io/opengraph/developer/best-practices)
+- [BloodHound OpenGraph Schema](https://bloodhound.specterops.io/opengraph/developer/graph-data)
+- [BloodHound OpenGraph API](https://bloodhound.specterops.io/opengraph/developer/api)
+- [BloodHound OpenGraph Custom Icons](https://bloodhound.specterops.io/opengraph/developer/custom-icons)

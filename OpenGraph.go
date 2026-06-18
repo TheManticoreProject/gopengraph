@@ -15,9 +15,8 @@ import (
 // Follows BloodHound OpenGraph schema requirements and best practices.
 //
 // Sources:
-// - https://bloodhound.specterops.io/opengraph/schema#opengraph
-// - https://bloodhound.specterops.io/opengraph/schema#minimal-working-json
-// - https://bloodhound.specterops.io/opengraph/best-practices
+// - https://bloodhound.specterops.io/opengraph/developer/graph-data
+// - https://bloodhound.specterops.io/opengraph/developer/best-practices
 type OpenGraph struct {
 	nodes      map[string]*node.Node
 	edges      []*edge.Edge
