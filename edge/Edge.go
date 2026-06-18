@@ -2,9 +2,35 @@ package edge
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/TheManticoreProject/gopengraph/properties"
 )
+
+// edgeKindPattern is the set of characters the OpenGraph schema allows in an
+// edge kind: uppercase letters, lowercase letters, digits, and underscores.
+//
+// Source: https://bloodhound.specterops.io/opengraph/developer/edges
+var edgeKindPattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+// reservedKindPrefix is reserved by BloodHound in any letter case and must not
+// be used for custom edge kinds.
+const reservedKindPrefix = "tag_"
+
+// validateKind reports whether kind is a valid OpenGraph edge kind.
+func validateKind(kind string) error {
+	if kind == "" {
+		return fmt.Errorf("edge kind cannot be empty")
+	}
+	if !edgeKindPattern.MatchString(kind) {
+		return fmt.Errorf("edge kind %q must match %s", kind, edgeKindPattern.String())
+	}
+	if len(kind) >= len(reservedKindPrefix) && strings.EqualFold(kind[:len(reservedKindPrefix)], reservedKindPrefix) {
+		return fmt.Errorf("edge kind %q must not use the reserved %q prefix", kind, reservedKindPrefix)
+	}
+	return nil
+}
 
 // match_by strategies for resolving an edge endpoint to a node, as defined by
 // the BloodHound OpenGraph edge schema.
@@ -175,8 +201,8 @@ func NewEdge(startNodeID string, endNodeID string, kind string, p *properties.Pr
 // NewEdgeWithEndpoints creates a new Edge instance from explicit endpoints,
 // allowing any match strategy for either end.
 func NewEdgeWithEndpoints(start Endpoint, end Endpoint, kind string, p *properties.Properties) (*Edge, error) {
-	if kind == "" {
-		return nil, fmt.Errorf("edge kind cannot be empty")
+	if err := validateKind(kind); err != nil {
+		return nil, err
 	}
 	if err := start.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid start endpoint: %w", err)

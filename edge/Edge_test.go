@@ -89,6 +89,32 @@ func TestNewEdge(t *testing.T) {
 	}
 }
 
+func TestNewEdgeKindValidation(t *testing.T) {
+	valid := []string{"Knows", "CONNECTS_TO", "Okta_ResetPassword", "a1_B2"}
+	for _, kind := range valid {
+		if _, err := edge.NewEdge("a", "b", kind, nil); err != nil {
+			t.Errorf("expected kind %q to be valid, got error: %v", kind, err)
+		}
+	}
+
+	invalid := []struct {
+		kind   string
+		reason string
+	}{
+		{"Has Access", "contains a space"},
+		{"Reset-Password", "contains a hyphen"},
+		{"Owns!", "contains punctuation"},
+		{"tag_custom", "reserved tag_ prefix"},
+		{"TAG_Custom", "reserved prefix, uppercase"},
+		{"Tag_Custom", "reserved prefix, mixed case"},
+	}
+	for _, tc := range invalid {
+		if _, err := edge.NewEdge("a", "b", tc.kind, nil); err == nil {
+			t.Errorf("expected kind %q to be rejected (%s), got nil error", tc.kind, tc.reason)
+		}
+	}
+}
+
 func TestEdgeProperties(t *testing.T) {
 	e, err := edge.NewEdge("start1", "end1", "CONNECTS_TO", nil)
 	if err != nil {
