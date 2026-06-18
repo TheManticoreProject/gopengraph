@@ -46,8 +46,8 @@ func TestSetProperty(t *testing.T) {
 		{"int", 42},
 		{"float", 3.14},
 		{"bool", true},
-		{"nil", nil},
-		{"slice", []string{"a", "b", "c"}},
+		{"string-slice", []string{"a", "b", "c"}},
+		{"int-slice", []int{1, 2, 3}},
 	}
 
 	for _, test := range validTests {
@@ -69,9 +69,12 @@ func TestSetProperty(t *testing.T) {
 
 	// Test invalid property types (should panic)
 	invalidTests := []interface{}{
-		map[string]string{"key": "value"}, // map
-		struct{}{},                        // struct
-		func() {},                         // function
+		nil,                                   // null is not an allowed property value
+		map[string]string{"key": "value"},     // map / nested object
+		struct{}{},                            // struct
+		func() {},                             // function
+		[]map[string]string{{"key": "value"}}, // array of objects
+		[]interface{}{1, "a"},                 // array mixing primitive types
 	}
 
 	for _, invalidValue := range invalidTests {
@@ -260,9 +263,10 @@ func TestIsValidPropertyValue(t *testing.T) {
 		42,
 		3.14,
 		true,
-		nil,
 		[]string{"a", "b"},
 		[]int{1, 2, 3},
+		[]bool{true, false},
+		[]string{}, // empty homogeneous array
 	}
 
 	for _, value := range validTypes {
@@ -273,10 +277,14 @@ func TestIsValidPropertyValue(t *testing.T) {
 
 	// Test invalid types
 	invalidTypes := []interface{}{
-		map[string]string{"key": "value"},
+		nil,                               // null is not an allowed property value
+		map[string]string{"key": "value"}, // nested object
 		struct{ field string }{field: "value"},
 		func() {},
 		make(chan int),
+		[]map[string]string{{"key": "value"}}, // array of objects
+		[]interface{}{1, "a"},                 // array mixing primitive types
+		[][]int{{1, 2}},                       // array of arrays
 	}
 
 	for _, value := range invalidTypes {
