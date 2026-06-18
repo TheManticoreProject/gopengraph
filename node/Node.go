@@ -10,18 +10,29 @@ import (
 // Follows BloodHound OpenGraph schema requirements with unique IDs, kinds, and properties.
 //
 // Sources:
-// - https://bloodhound.specterops.io/opengraph/schema#nodes
-// - https://bloodhound.specterops.io/opengraph/schema#minimal-working-json
+// - https://bloodhound.specterops.io/opengraph/developer/nodes
+// - https://bloodhound.specterops.io/opengraph/developer/graph-data
 type Node struct {
 	id         string
 	kinds      []string
 	properties *properties.Properties
 }
 
+// MaxKinds is the maximum number of kinds a node may have, as defined by the
+// BloodHound OpenGraph schema (the node "kinds" array is constrained to
+// "maxItems": 3).
+//
+// Source: https://bloodhound.specterops.io/opengraph/developer/nodes
+const MaxKinds = 3
+
 // NewNode creates a new Node instance
 func NewNode(id string, kinds []string, p *properties.Properties) (*Node, error) {
 	if id == "" {
 		return nil, fmt.Errorf("node ID cannot be empty")
+	}
+
+	if len(kinds) > MaxKinds {
+		return nil, fmt.Errorf("node cannot have more than %d kinds, got %d", MaxKinds, len(kinds))
 	}
 
 	if kinds == nil {
@@ -39,11 +50,21 @@ func NewNode(id string, kinds []string, p *properties.Properties) (*Node, error)
 	}, nil
 }
 
-// AddKind adds a kind/type to the node if it doesn't already exist
-func (n *Node) AddKind(kind string) {
-	if !n.HasKind(kind) {
-		n.kinds = append(n.kinds, kind)
+// AddKind adds a kind/type to the node if it doesn't already exist.
+//
+// The BloodHound OpenGraph schema limits a node to at most MaxKinds (3) kinds.
+// AddKind returns true if the node has the kind after the call (it was added or
+// was already present) and false if the kind could not be added because the
+// node already holds the maximum number of kinds.
+func (n *Node) AddKind(kind string) bool {
+	if n.HasKind(kind) {
+		return true
 	}
+	if len(n.kinds) >= MaxKinds {
+		return false
+	}
+	n.kinds = append(n.kinds, kind)
+	return true
 }
 
 // RemoveKind removes a kind/type from the node if it exists

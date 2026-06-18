@@ -194,6 +194,42 @@ func TestNodeString(t *testing.T) {
 	}
 }
 
+func TestNewNodeKindsLimit(t *testing.T) {
+	// Three kinds is the maximum allowed by the OpenGraph schema.
+	if _, err := node.NewNode("node1", []string{"A", "B", "C"}, nil); err != nil {
+		t.Fatalf("unexpected error for three kinds: %v", err)
+	}
+
+	// Four kinds must be rejected.
+	_, err := node.NewNode("node1", []string{"A", "B", "C", "D"}, nil)
+	if err == nil {
+		t.Fatal("expected error for a node created with four kinds, got nil")
+	}
+}
+
+func TestAddKindRespectsMaxKinds(t *testing.T) {
+	n, err := node.NewNode("node1", []string{"A", "B", "C"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Adding a kind already present is a no-op success.
+	if !n.AddKind("A") {
+		t.Error("expected AddKind to return true for an existing kind")
+	}
+
+	// Adding a fourth distinct kind must fail and must not grow the slice.
+	if n.AddKind("D") {
+		t.Error("expected AddKind to return false when the node already has the maximum number of kinds")
+	}
+	if n.HasKind("D") {
+		t.Error("expected kind 'D' not to be added beyond the maximum")
+	}
+	if len(n.GetKinds()) != node.MaxKinds {
+		t.Errorf("expected %d kinds, got %d", node.MaxKinds, len(n.GetKinds()))
+	}
+}
+
 // Helper function to check if a slice contains a string
 func contains(slice []string, str string) bool {
 	for _, s := range slice {
