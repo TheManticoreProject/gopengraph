@@ -145,18 +145,18 @@ func TestEdgeToDict(t *testing.T) {
 	}
 
 	// Check start node
-	startNode, ok := dict["start"].(map[string]string)
+	startNode, ok := dict["start"].(map[string]interface{})
 	if !ok {
-		t.Fatal("expected start to be map[string]string")
+		t.Fatal("expected start to be map[string]interface{}")
 	}
 	if startNode["value"] != "start1" || startNode["match_by"] != "id" {
 		t.Error("incorrect start node mapping")
 	}
 
 	// Check end node
-	endNode, ok := dict["end"].(map[string]string)
+	endNode, ok := dict["end"].(map[string]interface{})
 	if !ok {
-		t.Fatal("expected end to be map[string]string")
+		t.Fatal("expected end to be map[string]interface{}")
 	}
 	if endNode["value"] != "end1" || endNode["match_by"] != "id" {
 		t.Error("incorrect end node mapping")
@@ -178,6 +178,102 @@ func TestEdgeString(t *testing.T) {
 	expected := "Edge(start='start1', end='end1', kind='CONNECTS_TO', properties=map[])"
 	if str != expected {
 		t.Errorf("expected string %q, got %q", expected, str)
+	}
+}
+
+func TestEdgeMatchByName(t *testing.T) {
+	e, err := edge.NewEdgeWithEndpoints(
+		edge.NewEndpointByName("alice", "User"),
+		edge.NewEndpointByName("file-server-1", "Server"),
+		"HasAccess",
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	dict := e.ToDict()
+	start, ok := dict["start"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected start to be map[string]interface{}")
+	}
+	if start["match_by"] != edge.MatchByName {
+		t.Errorf("expected match_by %q, got %v", edge.MatchByName, start["match_by"])
+	}
+	if start["value"] != "alice" {
+		t.Errorf("expected value 'alice', got %v", start["value"])
+	}
+	if start["kind"] != "User" {
+		t.Errorf("expected kind 'User', got %v", start["kind"])
+	}
+	if _, present := start["property_matchers"]; present {
+		t.Error("name endpoint must not include property_matchers")
+	}
+}
+
+func TestEdgeMatchByProperty(t *testing.T) {
+	matchers := []edge.PropertyMatcher{
+		{Key: "username", Operator: "equals", Value: "alice.smith"},
+		{Key: "active", Operator: "equals", Value: true},
+	}
+	e, err := edge.NewEdgeWithEndpoints(
+		edge.NewEndpointByProperty(matchers, "User"),
+		edge.NewEndpointByID("server-1"),
+		"CustomRelationship",
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	dict := e.ToDict()
+	start, ok := dict["start"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected start to be map[string]interface{}")
+	}
+	if start["match_by"] != edge.MatchByProperty {
+		t.Errorf("expected match_by %q, got %v", edge.MatchByProperty, start["match_by"])
+	}
+	if _, present := start["value"]; present {
+		t.Error("property endpoint must not include a top-level value")
+	}
+	pm, ok := start["property_matchers"].([]map[string]interface{})
+	if !ok {
+		t.Fatalf("expected property_matchers to be []map[string]interface{}, got %T", start["property_matchers"])
+	}
+	if len(pm) != 2 {
+		t.Fatalf("expected 2 property matchers, got %d", len(pm))
+	}
+	if pm[0]["key"] != "username" || pm[0]["operator"] != "equals" || pm[0]["value"] != "alice.smith" {
+		t.Errorf("unexpected first matcher: %v", pm[0])
+	}
+}
+
+func TestEndpointValidate(t *testing.T) {
+	// id/name require a value
+	if err := edge.NewEndpointByID("").Validate(); err == nil {
+		t.Error("expected error for id endpoint with empty value")
+	}
+	// property requires at least one matcher
+	if err := edge.NewEndpointByProperty(nil, "User").Validate(); err == nil {
+		t.Error("expected error for property endpoint without matchers")
+	}
+	// property matcher requires a key
+	bad := edge.NewEndpointByProperty([]edge.PropertyMatcher{{Operator: "equals", Value: "x"}}, "")
+	if err := bad.Validate(); err == nil {
+		t.Error("expected error for property matcher with empty key")
+	}
+	// valid endpoints
+	if err := edge.NewEndpointByName("alice", "User").Validate(); err != nil {
+		t.Errorf("unexpected error for valid name endpoint: %v", err)
+	}
+}
+
+func TestEdgeEqualAcrossMatchStrategies(t *testing.T) {
+	byID, _ := edge.NewEdge("a", "b", "K", nil)
+	byName, _ := edge.NewEdgeWithEndpoints(edge.NewEndpointByName("a", ""), edge.NewEndpointByID("b"), "K", nil)
+	if byID.Equal(byName) {
+		t.Error("edges differing only in start match strategy must not be equal")
 	}
 }
 
